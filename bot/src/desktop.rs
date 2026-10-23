@@ -139,8 +139,19 @@ fn run(
 
     let mut bot = ModeSwitchedBot::new(board, options, book.as_deref());
 
+    // the cpus this thread may run on, which it inherited from the process
+    let cpus = if options.pin_threads {
+        core_affinity::get_core_ids().unwrap_or_default()
+    } else {
+        vec![]
+    };
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(options.threads as usize)
+        .start_handler(move |worker| {
+            if !cpus.is_empty() {
+                core_affinity::set_for_current(cpus[worker % cpus.len()]);
+            }
+        })
         .build()
         .unwrap();
 

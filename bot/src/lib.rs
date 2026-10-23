@@ -33,6 +33,8 @@ pub struct Options {
     pub min_nodes: u32,
     pub max_nodes: u32,
     pub threads: u32,
+    /// pin worker k to the k-th cpu this process may run on (not on the web)
+    pub pin_threads: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -86,6 +88,7 @@ impl Default for Options {
             min_nodes: 0,
             max_nodes: 4_000_000_000,
             threads: 1,
+            pin_threads: false,
         }
     }
 }

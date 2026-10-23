@@ -1,28 +1,40 @@
 use std::convert::Infallible;
 
 use futures::{Sink, SinkExt, Stream, StreamExt};
-use tbp::randomizer::RandomizerState;
-use tbp::{BotMessage, FrontendMessage};
+
+pub mod protocol;
+
+use protocol as tbp;
+use protocol::{BotMessage, FrontendMessage, RandomizerState};
 
 pub async fn run(
-    mut incoming: impl Stream<Item = tbp::FrontendMessage> + Unpin,
-    mut outgoing: impl Sink<tbp::BotMessage, Error = Infallible> + Unpin,
+    mut incoming: impl Stream<Item = FrontendMessage> + Unpin,
+    mut outgoing: impl Sink<BotMessage, Error = Infallible> + Unpin,
 ) {
     let mut bot = None;
+    // set by `rules`, for the bots that `start` launches
+    let mut threads = 1;
+    let mut min_nodes = 0;
 
     outgoing
         .send(BotMessage::Info {
             name: "Cold Clear".to_string(),
-            version: "2020-05-05".to_string(),
+            version: "2020-05-05+tbp2".to_string(),
             author: "MinusKelvin".to_string(),
-            features: tbp::Feature::enabled(),
+            features: protocol::FEATURES.iter().map(|f| f.to_string()).collect(),
         })
         .await
         .unwrap();
 
     while let Some(msg) = incoming.next().await {
         match msg {
-            FrontendMessage::Rules { randomizer: _ } => {
+            FrontendMessage::Rules {
+                randomizer: _,
+                threads: t,
+                min_nodes: n,
+            } => {
+                threads = t.unwrap_or(1).max(1);
+                min_nodes = n.unwrap_or(0);
                 outgoing.send(BotMessage::Ready).await.unwrap();
             }
             FrontendMessage::Start {
@@ -43,9 +55,9 @@ pub async fn run(
                 }
                 b.combo = combo;
                 #[cfg(feature = "tetrio_garbage")]
-                let b2b = if back_to_back { 1 } else { 0 };
-                #[cfg(not(feature = "tetrio_garbage"))]
                 let b2b = back_to_back;
+                #[cfg(not(feature = "tetrio_garbage"))]
+                let b2b = back_to_back > 0;
                 b.b2b_bonus = b2b;
                 let mut field = [[false; 10]; 40];
                 for y in 0..40 {
@@ -57,6 +69,9 @@ pub async fn run(
 
                 let options = cold_clear::Options {
                     speculate: matches!(randomizer, RandomizerState::SevenBag { .. }),
+                    threads,
+                    min_nodes,
+                    pin_threads: true,
                     ..Default::default()
                 };
                 let eval = cold_clear::evaluation::Standard::default();
@@ -99,6 +114,7 @@ pub async fn run(
                 }
             }
             FrontendMessage::Quit => return,
+            FrontendMessage::Unknown => {}
         }
     }
 }

@@ -1,7 +1,10 @@
 fn main() {
     let incoming = futures::stream::repeat_with(|| {
         let mut line = String::new();
-        std::io::stdin().read_line(&mut line).unwrap();
+        // the frontend closing our input means quit
+        if std::io::stdin().read_line(&mut line).unwrap() == 0 {
+            return cc_tbp::protocol::FrontendMessage::Quit;
+        }
         serde_json::from_str(&line).unwrap()
     });
 

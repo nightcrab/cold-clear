@@ -211,6 +211,7 @@ fn convert_from_c_options(options: &CCOptions) -> cold_clear::Options {
         mode: options.mode.into(),
         spawn_rule: options.spawn_rule.into(),
         threads: options.threads,
+        pin_threads: false,
     }
 }
 
