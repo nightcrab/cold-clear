@@ -205,6 +205,8 @@ fn convert_from_c_options(options: &CCOptions) -> cold_clear::Options {
     cold_clear::Options {
         max_nodes: options.max_nodes,
         min_nodes: options.min_nodes,
+        min_thinks: 0,
+        max_thinks: u32::MAX,
         use_hold: options.use_hold,
         speculate: options.speculate,
         pcloop: options.pcloop.into(),

@@ -683,7 +683,7 @@ impl<E: Evaluation<R> + 'static, R: Clone + 'static> DagState<E, R> {
 
     pub fn advance_move(&mut self, mv: FallingPiece) {
         if self.try_advance_move(mv).is_none() {
-            self.board.lock_piece(mv);
+            advance(&mut self.board, mv);
 
             self.gens_passed += self.generations.len() as u32 + 1;
             self.root = 0;

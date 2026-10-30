@@ -15,6 +15,7 @@ pub async fn run(
     // set by `rules`, for the bots that `start` launches
     let mut threads = 1;
     let mut min_nodes = 0;
+    let mut thinks = None;
 
     outgoing
         .send(BotMessage::Info {
@@ -32,9 +33,11 @@ pub async fn run(
                 randomizer: _,
                 threads: t,
                 min_nodes: n,
+                thinks: k,
             } => {
                 threads = t.unwrap_or(1).max(1);
                 min_nodes = n.unwrap_or(0);
+                thinks = k;
                 outgoing.send(BotMessage::Ready).await.unwrap();
             }
             FrontendMessage::Start {
@@ -71,6 +74,8 @@ pub async fn run(
                     speculate: matches!(randomizer, RandomizerState::SevenBag { .. }),
                     threads,
                     min_nodes,
+                    min_thinks: thinks.unwrap_or(0),
+                    max_thinks: thinks.unwrap_or(u32::MAX),
                     pin_threads: true,
                     ..Default::default()
                 };

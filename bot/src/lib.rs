@@ -32,6 +32,10 @@ pub struct Options {
     pub pcloop: Option<modes::pcloop::PcPriority>,
     pub min_nodes: u32,
     pub max_nodes: u32,
+    /// thinks (select a leaf, expand it, back up) per move: don't suggest before min_thinks have
+    /// finished, and start no more than max_thinks. min = max = N searches exactly N per move
+    pub min_thinks: u32,
+    pub max_thinks: u32,
     pub threads: u32,
     /// pin worker k to the k-th cpu this process may run on (not on the web)
     pub pin_threads: bool,
@@ -87,6 +91,8 @@ impl Default for Options {
             pcloop: None,
             min_nodes: 0,
             max_nodes: 4_000_000_000,
+            min_thinks: 0,
+            max_thinks: u32::MAX,
             threads: 1,
             pin_threads: false,
         }

@@ -1,8 +1,9 @@
 //! TBP2: `back_to_back` is the B2B chain
 //! length rather than a bool, `start` carries `meter` and `opponents`, and `rules` carries the
 //! settings a bot advertised a feature for (`threads` for `set_threads`, `min_nodes` for
-//! `set_min_nodes`). Plain TBP1 frontends still work: a bool `back_to_back` is accepted, and fields
-//! and message types we don't know are ignored, as the spec asks.
+//! `set_min_nodes`, `thinks` for `set_thinks`). Plain TBP1 frontends still work: a bool
+//! `back_to_back` is accepted, and fields and message types we don't know are ignored, as the spec
+//! asks.
 
 use serde::{Deserialize, Serialize};
 use serde_big_array::big_array;
@@ -11,7 +12,7 @@ big_array!(BigArray; 40);
 
 /// The features advertised in `info`; the frontend sends the matching `rules` fields only to bots
 /// that advertise them.
-pub const FEATURES: &[&str] = &["set_threads", "set_min_nodes"];
+pub const FEATURES: &[&str] = &["set_threads", "set_min_nodes", "set_thinks"];
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "type")]
@@ -26,6 +27,10 @@ pub enum FrontendMessage {
         /// nodes to search before suggesting (`set_min_nodes`)
         #[serde(default)]
         min_nodes: Option<u32>,
+        /// exactly this many thinks per move (`set_thinks`): one think selects a leaf, expands it
+        /// and backs up, like one of nana's simulations
+        #[serde(default)]
+        thinks: Option<u32>,
     },
     Start {
         hold: Option<Piece>,
@@ -237,6 +242,7 @@ mod tests {
                 randomizer: RandomizerRule::Unknown,
                 threads: Some(8),
                 min_nodes: Some(2000),
+                thinks: None,
             }
         );
         let msg = r#"{"type":"rules"}"#;
@@ -246,6 +252,17 @@ mod tests {
                 randomizer: RandomizerRule::Unknown,
                 threads: None,
                 min_nodes: None,
+                thinks: None,
+            }
+        );
+        let msg = r#"{"type":"rules","thinks":1000}"#;
+        assert_eq!(
+            serde_json::from_str::<FrontendMessage>(msg).unwrap(),
+            FrontendMessage::Rules {
+                randomizer: RandomizerRule::Unknown,
+                threads: None,
+                min_nodes: None,
+                thinks: Some(1000),
             }
         );
     }

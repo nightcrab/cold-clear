@@ -13,6 +13,8 @@ pub struct BotState<E: Evaluator> {
     options: Options,
     forced_analysis_lines: Vec<Vec<FallingPiece>>,
     pub outstanding_thinks: u32,
+    /// thinks finished since the last move
+    thinks: u32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -36,6 +38,7 @@ impl<E: Evaluator> BotState<E> {
             options,
             forced_analysis_lines: vec![],
             outstanding_thinks: 0,
+            thinks: 0,
         }
     }
 
@@ -43,8 +46,9 @@ impl<E: Evaluator> BotState<E> {
     ///
     /// Returns `Err(true)` if a thinking cycle can be preformed, but it couldn't find
     pub fn think(&mut self) -> Result<Thinker, bool> {
-        if (!self.min_thinking_reached() || self.tree.nodes() < self.options.max_nodes)
-            && !self.tree.is_dead()
+        let under_max = self.tree.nodes() < self.options.max_nodes
+            && self.thinks + self.outstanding_thinks < self.options.max_thinks;
+        if (!self.min_thinking_reached() || under_max) && !self.tree.is_dead()
         {
             if let Some((node, board)) = self
                 .tree
@@ -66,6 +70,7 @@ impl<E: Evaluator> BotState<E> {
 
     pub fn finish_thinking(&mut self, result: ThinkResult<E::Value, E::Reward>) {
         self.outstanding_thinks -= 1;
+        self.thinks += 1;
         match result {
             ThinkResult::Known(node, children) => self.tree.update_known(node, children),
             ThinkResult::Speculated(node, children) => self.tree.update_speculated(node, children),
@@ -110,6 +115,7 @@ impl<E: Evaluator> BotState<E> {
 
     pub fn min_thinking_reached(&self) -> bool {
         self.tree.nodes() > self.options.min_nodes
+            && self.thinks >= self.options.min_thinks
             && self.forced_analysis_lines.is_empty()
             && !self.tree.get_next_candidates().is_empty()
     }
@@ -196,6 +202,7 @@ impl<E: Evaluator> BotState<E> {
 
     pub fn advance_move(&mut self, mv: FallingPiece) {
         self.tree.advance_move(mv);
+        self.thinks = 0;
     }
 
     pub fn force_analysis_line(&mut self, path: Vec<FallingPiece>) {
